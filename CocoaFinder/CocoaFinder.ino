@@ -5,9 +5,12 @@ int scanTime = 5; //In seconds
 BLEScan* pBLEScan;
 
 const char* uuid = "0000fd6f-0000-1000-8000-00805f9b34fb";
-bool found = false;
 int deviceNum = 0;
-int nearDeviceNum = 0;
+int rssis[50];
+
+int desc(const void *a, const void *b) {
+  return *(int *)a - *(int *)b;
+}
 
 class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
   void onResult(BLEAdvertisedDevice advertisedDevice) {
@@ -19,11 +22,8 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
         Serial.print(" , ");
         Serial.print("RSSI: ");
         Serial.print(rssi);
-        deviceNum++;
-        if(rssi > -69){
-          found = true;
-          Serial.print(" >> Near! << ");
-          nearDeviceNum++;
+        if (deviceNum < sizeof rssis) {
+          rssis[deviceNum++] = rssi;
         }
         Serial.println("");
       }
@@ -44,40 +44,46 @@ void setup() {
   pBLEScan->setInterval(100);
   pBLEScan->setWindow(99); // less or equal setInterval value
 
-  M5.Lcd.setTextSize(2);
+  M5.Lcd.setTextSize(1);
 }
 
 void loop(){
-
   M5.update();
 
   Serial.println("Loop Start.");
-  found = false;
   deviceNum = 0;
-  nearDeviceNum = 0;
   BLEScanResults foundDevices = pBLEScan->start(scanTime, false); 
 
+  // ソートする
+  qsort(rssis, sizeof(int) * deviceNum, sizeof(int), desc);
   M5.Lcd.fillScreen(BLACK);
   M5.Lcd.setTextColor(WHITE);
-  M5.Lcd.setCursor(30, 20);
 
+  M5.Lcd.setTextFont(4);
+  M5.Lcd.setCursor(0, 0);
   M5.Lcd.print("Found : ");
   M5.Lcd.println(deviceNum);
-  Serial.print(" - FoundDevice : ");
-  Serial.println(deviceNum);
 
-  if(nearDeviceNum > 0){
-    M5.Lcd.setTextColor(YELLOW);
+  M5.Lcd.setTextFont(2);
+  int n = 20;
+  for (int i = 0; i < deviceNum; ++i, n += 10) { 
+    M5.Lcd.setCursor(0, n);
+    M5.Lcd.printf("%4d", rssis[i]);
+    uint16_t color = RED;
+    if (rssis[i] < -120) {
+      rssis[i] = -120;
+      color = RED;
+    } else if(rssis[i] < -50) {
+      color = YELLOW;      
+    } else if(rssis[i] < 0) {
+      color = GREEN;      
+    } else {
+      rssis[i] = 0;      
+    }
+    M5.Lcd.fillRect(40, n + 3, rssis[i] + 130, 8, color);
   }
-  M5.Lcd.setCursor(30, 50);
-  M5.Lcd.print("Near : ");
-  M5.Lcd.println(nearDeviceNum);
-  Serial.print(" - NearDevice : ");
-  Serial.println(nearDeviceNum);
-
 
   pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
   Serial.println("Loop End.");
   delay(1000);
-
 }
