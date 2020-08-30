@@ -33,6 +33,7 @@ class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
 
 void setup() {
   M5.begin(true, false, true);
+  pinMode(GPIO_NUM_10, OUTPUT);
   M5.Lcd.setRotation( 1 );
   M5.Lcd.fillScreen(BLACK);
 //    Serial.begin(115200);
@@ -45,6 +46,24 @@ void setup() {
   pBLEScan->setWindow(99); // less or equal setInterval value
 
   M5.Lcd.setTextSize(1);
+}
+
+void led() {
+  int wait = 1000;
+  digitalWrite(GPIO_NUM_10, LOW);
+  delay(50);
+  digitalWrite(GPIO_NUM_10, HIGH);
+  delay(50);
+
+  for (int i = 0; i < deviceNum; i++) {
+    digitalWrite(GPIO_NUM_10, LOW);
+    delay(50);
+    digitalWrite(GPIO_NUM_10, HIGH);
+    delay(50);
+    wait -= 100;
+  }
+  digitalWrite(GPIO_NUM_10, HIGH);
+  delay(wait);
 }
 
 void loop(){
@@ -85,5 +104,5 @@ void loop(){
 
   pBLEScan->clearResults(); // delete results fromBLEScan buffer to release memory
   Serial.println("Loop End.");
-  delay(1000);
+  led();
 }
